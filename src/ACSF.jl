@@ -1,22 +1,18 @@
 module ACSF
 
-using JuLIP
+#using JuLIP
 using LinearAlgebra
+using ASE, NeighbourLists
 
-export acsf, acsf_desc
+export acsf, acsf_desc, generate_sf_parameters, set_Behler2011
 
-#acsfPI = 3.14159265358979
-acsfPI = 3.14159265359
 unit_BOHR = 0.52917721067
 
-function generate_sf_parameters(;n=5, cutoff=6.0, bohr=false):
-    #Default values: cutoff = 6.0
-    # n = 5 , number of intervals
+function generate_sf_parameters(;n=5, cutoff=6.0, bohr=false)
     if bohr
         cutoff = cutoff/unit_BOHR
     end
     m = collect(0:n)
-    #m = np.array(range(n+1), dtype=np.float32)
     n_pow = n.^(m./n)
     eta_m = (n_pow./cutoff).^2
     R_s = cutoff./n_pow
@@ -73,16 +69,25 @@ function get_max_Rc(Gparams)
     return Rc
 end
 
-function cutoff_func(dij, Rc)
+function cutoff_Tanh(dij, Rc)
     fc = zeros(size(dij))
     dij_in_Rc = dij .<= Rc
-    fc[dij_in_Rc] = 0.5 .* ( cos.(dij[dij_in_Rc] .* acsfPI./Rc) .+ 1.0)
+    fc[dij_in_Rc] .= (tanh.(1.0 .- dij[dij_in_Rc]./Rc)).^3
     return fc  
 end
 
+function cutoff_Cosine(dij, Rc)
+    fc = zeros(size(dij))
+    dij_in_Rc = dij .<= Rc
+    fc[dij_in_Rc] .= 0.5 .* (cos.(dij[dij_in_Rc] .* π/Rc) .+ 1.0)
+    return fc  
+end
+
+cutoff_func(dij, Rc) = cutoff_Cosine(dij, Rc)
+
 function G2(dj, Rc, eta; Rs=0.0)
     fc_ij = cutoff_func(dj, Rc)
-    return 0.5 .* [sum(exp.(-eta[p] .* (dj .- Rs[p]).^2) .* fc_ij) for p=1:length(eta)]
+    return [sum(exp.(-eta[p] .* (dj .- Rs[p]).^2) .* fc_ij) for p=1:length(eta)]
 end
 
 #G2(dj, G) = G2(dj, G[1], G[2], Rs=G[3])
@@ -131,20 +136,28 @@ function acsf_desc(Rs; Gparams=nothing)
     return descriptor
 end
 
-function acsf(at; Gparams=nothing)
+function acsf(at; Gparams=nothing, ASEneigh=false)
     if Gparams == nothing
         Gparams = set_Behler2011()
     end
     representation = []
-    ni = []
-    nj = []
-    nR = []
-    nd = []
-    for (i, j, R) in pairs(neighbourlist(at, get_max_Rc(Gparams)))
-        push!(ni, i)
-        push!(nj, j)
-        push!(nR, R)
-        push!(nd, norm(R))
+    if ASEneigh
+        nlists = neighbourlist(at, get_max_Rc(Gparams))
+        ni = nlists.i
+        nj = nlists.j
+        nR = nlists.R
+        nd = nlists.r
+    else
+        ni = []
+        nj = []
+        nR = []
+        nd = []
+        for (i, j, R) in pairs(neighbourlist(at, get_max_Rc(Gparams)))
+            push!(ni, i)
+            push!(nj, j)
+            push!(nR, R)
+            push!(nd, norm(R))
+        end
     end
     for i=1:length(at)
         Rs = nR[(ni .== i)]
