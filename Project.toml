@@ -1,7 +1,7 @@
 name = "ACSF"
 uuid = "d2bdc3a2-1f09-4d6b-8406-1d3d6d420f84"
 authors = ["onatberk "]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
