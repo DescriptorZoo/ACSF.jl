@@ -117,7 +117,7 @@ function G4(Rj, dj, Rc, eta, lambd, zeta; cutTanh=false)
                ) for p = 1:length(eta) ]
 end
 
-function G6(Rj, dj, Rc, eta, lambd, zeta; cutTanh=false, l=nothing)
+function G9(Rj, dj, Rc, eta, lambd, zeta; cutTanh=false, l=nothing)
     if l == nothing
         l=1
     end
@@ -149,7 +149,7 @@ function G6(Rj, dj, Rc, eta, lambd, zeta; cutTanh=false, l=nothing)
             #   ) for p = 1:length(eta) ]
 end
 
-function acsf_desc(Rs; Gparams=nothing, cutfunc=nothing, useG6=false, l=nothing)
+function acsf_desc(Rs; Gparams=nothing, cutfunc=nothing, useG9=false, l=nothing)
     ds = norm.(Rs)
     descriptor = []
     if cutfunc == "Tanh" || cutfunc == "tanh"
@@ -175,8 +175,8 @@ function acsf_desc(Rs; Gparams=nothing, cutfunc=nothing, useG6=false, l=nothing)
     end
     if "G4" in keys(Gparams)
         # Concatenate angular basis functions
-        if useG6
-            descriptor = vcat(descriptor,G6(Rs, ds, Gparams["G4"][1],
+        if useG9
+            descriptor = vcat(descriptor,G9(Rs, ds, Gparams["G4"][1],
                                                     Gparams["G4"][2],
                                                     Gparams["G4"][3],
                                                     Gparams["G4"][4],
@@ -192,7 +192,7 @@ function acsf_desc(Rs; Gparams=nothing, cutfunc=nothing, useG6=false, l=nothing)
     return descriptor
 end
 
-function acsf(at; Gparams=nothing, cutfunc=nothing, useG6=false, l=nothing)
+function acsf(at; Gparams=nothing, cutfunc=nothing, useG9=false, l=nothing)
     if Gparams == nothing
         Gparams = set_Behler2011()
     end
@@ -209,7 +209,7 @@ function acsf(at; Gparams=nothing, cutfunc=nothing, useG6=false, l=nothing)
     end
     for i = 1:length(at)
         Rs = nR[(ni .== i)]
-        push!(representation,acsf_desc(Rs, Gparams=Gparams, cutfunc=cutfunc, useG6=useG6, l=l))
+        push!(representation,acsf_desc(Rs, Gparams=Gparams, cutfunc=cutfunc, useG9=useG9, l=l))
     end
     return representation
 end
