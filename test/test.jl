@@ -35,12 +35,4 @@ acsf_now = vcat(desc[1,:]...)
 println("ACSF.jl returns:",acsf_now)
 println("Reference:",acsf_ref)
 println(@test acsf_now  ≈  acsf_ref)
-
-desc2 = acsf(at, useG6=true)
-acsf_now2 = vcat(desc2[1,:]...)
-println("ACSF.jl returns:",acsf_now2)
-
-desc3 = acsf(at, useG6=true, m=4)
-acsf_now3 = vcat(desc3[1,:]...)
-println("ACSF.jl returns:",acsf_now3)
 end
