@@ -6,6 +6,7 @@ using LinearAlgebra
 export acsf, acsf_desc, G2, G4, cutoff_func, get_max_Rc, generate_sf_parameters, set_Behler2011
 
 unit_BOHR = 0.52917721067
+acsfPI = 3.14159265358979
 
 function generate_sf_parameters(;n=5, cutoff=6.0, bohr=false)
     if bohr
@@ -116,7 +117,39 @@ function G4(Rj, dj, Rc, eta, lambd, zeta; cutTanh=false)
                ) for p = 1:length(eta) ]
 end
 
-function acsf_desc(Rs; Gparams=nothing, cutfunc=nothing)
+function G6(Rj, dj, Rc, eta, lambd, zeta; cutTanh=false, l=nothing)
+    if l == nothing
+        l=1
+    end
+    if l<1
+        l=1
+    end
+    counts = collect(1:size(dj,1))
+    # So far no other way to do this simpler.
+    Rij = collect(Iterators.flatten([[Rj[j] for k in counts] for j in counts]))
+    Rik = collect(Iterators.flatten([[Rj[k] for k in counts] for j in counts]))
+    Dij = collect(Iterators.flatten([[dj[j] for k in counts] for j in counts]))
+    Dik = collect(Iterators.flatten([[dj[k] for k in counts] for j in counts]))
+    Djk = norm.(Rik .- Rij)
+    ###
+    cos_theta_ijk = [Rik[i,:]' * Rij[i,:] for i = 1:size(Rij,1)] ./ (Dij .* Dik)
+    exp_arg = Dij.^2 .+ Dik.^2 .+ Djk.^2
+    fc_all = cutoff_func(Dij, Rc, cutTanh=cutTanh) .* 
+             cutoff_func(Dik, Rc, cutTanh=cutTanh) .*  
+             cutoff_func(Djk, Rc, cutTanh=cutTanh)
+    jkmask = collect(Iterators.flatten([[k>j for k in counts] for j in counts]))
+    return [ 
+            sum( ((sqrt.(Complex.(1.0 .- cos_theta_ijk[jkmask] .^ 2)) .^ (2 * l * zeta[p])) .* 
+                   exp.(1im * 2 * l * zeta[p])) .^ 2 .*
+                 exp.(-eta[p] .* exp_arg[jkmask]) .* fc_all[jkmask]
+               ) for p = 1:length(eta) ]
+            #sum( abs2.((sqrt.(Complex.(1.0 .- cos_theta_ijk[jkmask].^2)) .^ (2 * l * zeta[p])) .* 
+            #       exp.(1im * 2 * l * zeta[p])) .*
+            #     exp.(-eta[p] .* exp_arg[jkmask]) .* fc_all[jkmask]
+            #   ) for p = 1:length(eta) ]
+end
+
+function acsf_desc(Rs; Gparams=nothing, cutfunc=nothing, useG6=false, l=nothing)
     ds = norm.(Rs)
     descriptor = []
     if cutfunc == "Tanh" || cutfunc == "tanh"
@@ -142,16 +175,24 @@ function acsf_desc(Rs; Gparams=nothing, cutfunc=nothing)
     end
     if "G4" in keys(Gparams)
         # Concatenate angular basis functions
-        descriptor = vcat(descriptor,G4(Rs, ds, Gparams["G4"][1],
-                                                Gparams["G4"][2],
-                                                Gparams["G4"][3],
-                                                Gparams["G4"][4],
-                                                cutTanh=cutTanh))
+        if useG6
+            descriptor = vcat(descriptor,G6(Rs, ds, Gparams["G4"][1],
+                                                    Gparams["G4"][2],
+                                                    Gparams["G4"][3],
+                                                    Gparams["G4"][4],
+                                                    cutTanh=cutTanh, l=l))
+        else
+            descriptor = vcat(descriptor,G4(Rs, ds, Gparams["G4"][1],
+                                                    Gparams["G4"][2],
+                                                    Gparams["G4"][3],
+                                                    Gparams["G4"][4],
+                                                    cutTanh=cutTanh))
+        end
     end
     return descriptor
 end
 
-function acsf(at; Gparams=nothing, cutfunc=nothing)
+function acsf(at; Gparams=nothing, cutfunc=nothing, useG6=false, l=nothing)
     if Gparams == nothing
         Gparams = set_Behler2011()
     end
@@ -168,7 +209,7 @@ function acsf(at; Gparams=nothing, cutfunc=nothing)
     end
     for i = 1:length(at)
         Rs = nR[(ni .== i)]
-        push!(representation,acsf_desc(Rs, Gparams=Gparams, cutfunc=cutfunc))
+        push!(representation,acsf_desc(Rs, Gparams=Gparams, cutfunc=cutfunc, useG6=useG6, l=l))
     end
     return representation
 end
