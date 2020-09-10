@@ -18,3 +18,9 @@ Atom Centred Symmetry Functions are defined in **J. Behler, The Journal of Chemi
 ```
 acsf(atoms)
 ```
+
+### How to cite:
+
+If you use this code, please cite the following papers:
+- Jörg Behler, [J. Chem. Phys. 134, 074106 (2011)](https://doi.org/10.1063/1.3553717)
+- Berk Onat, Christoph Ortner, James R. Kermode, 	[arXiv:2006.01915 (2020)](https://arxiv.org/abs/2006.01915)
